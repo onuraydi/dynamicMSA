@@ -129,12 +129,7 @@ def align(
     result = progressive_align(sequences, names, scoring)
 
     if verbose:
-        print(f"✅ Hizalama tamamlandı! Toplam skor: {result['score']:.2f}")
-        print()
-        print("=" * (len(result['aligned'][0]) + 15))
-        for name, seq in zip(result['names'], result['aligned']):
-            print(f"  {name:<12} {seq}")
-        print("=" * (len(result['aligned'][0]) + 15))
+        _pretty_print(result)
 
     # ---------------------------------------------------------------
     # ADIM 2: Görselleştirme
@@ -143,6 +138,45 @@ def align(
         _visualize(sequences, names, result, save_figures, output_dir, verbose)
 
     return result
+
+
+def _pretty_print(result: dict) -> None:
+    """Hizalama sonucunu düzenli formatta konsola yazdırır."""
+    aligned = result["aligned"]
+    names   = result["names"]
+    dm      = result["distance_matrix"]
+    history = result["guide_tree"].get("merge_history", [])
+
+    col_w = max(len(n) for n in names) + 2
+    seq_w = len(aligned[0]) if aligned else 0
+    total_w = col_w + seq_w + 4
+
+    print()
+    print("╔" + "═" * (total_w - 2) + "╗")
+    print("║" + " HIZALAMA SONUCU ".center(total_w - 2) + "║")
+    print("╠" + "═" * (total_w - 2) + "╣")
+    for name, seq in zip(names, aligned):
+        print(f"║  {name:<{col_w}}{seq}  ║")
+    print("╠" + "═" * (total_w - 2) + "╣")
+    print(f"║  Toplam Skor : {result['score']:<{total_w - 20}}║")
+    print("╚" + "═" * (total_w - 2) + "╝")
+
+    print()
+    print("┌─ MESAFE MATRİSİ ")
+    header = " " * (col_w + 2) + "".join(f"{n:^10}" for n in names)
+    print("│ " + header)
+    for i, name in enumerate(names):
+        row = "".join(f"{dm[i][j]:^10.3f}" for j in range(len(names)))
+        print(f"│  {name:<{col_w}}{row}")
+    print("└" + "─" * (len(header) + 2))
+
+    if history:
+        print()
+        print("┌─ BİRLEŞME SIRASI (UPGMA)")
+        for step, h in enumerate(history, 1):
+            a, b = h["merged"]
+            print(f"│  Adım {step}: '{a}' + '{b}'  →  mesafe: {h['distance']:.4f}")
+        print("└" + "─" * 40)
 
 
 def _visualize(sequences, names, result, save_figures, output_dir, verbose):
@@ -159,18 +193,19 @@ def _visualize(sequences, names, result, save_figures, output_dir, verbose):
     if verbose:
         print("\n📊 Görselleştirmeler oluşturuluyor...")
 
-    # 1. DP Matrisi: ilk iki dizi için göster
-    if len(sequences) >= 2:
-        a1, a2, _, matrix, path = needleman_wunsch(sequences[0], sequences[1], scoring)
-        plot_dp_matrix(
-            matrix=matrix,
-            seq1=sequences[0],
-            seq2=sequences[1],
-            path=path,
-            title=f"DP Matrisi: {names[0]} vs {names[1]}",
-            save_path=os.path.join(output_dir, "dp_matrix.png") if save_figures else None,
-            show=True
-        )
+    # 1. DP Matrisi: tüm dizi çiftleri için göster
+    for i in range(len(sequences)):
+        for j in range(i + 1, len(sequences)):
+            _, _, _, matrix, path = needleman_wunsch(sequences[i], sequences[j], scoring)
+            plot_dp_matrix(
+                matrix=matrix,
+                seq1=sequences[i],
+                seq2=sequences[j],
+                path=path,
+                title=f"DP Matrisi: {names[i]} vs {names[j]}",
+                save_path=os.path.join(output_dir, f"dp_matrix_{i}_{j}.png") if save_figures else None,
+                show=True
+            )
 
     # 2. Kılavuz Ağaç
     plot_guide_tree(

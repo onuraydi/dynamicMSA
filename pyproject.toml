@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=61.0"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "dynamicMSA"
@@ -8,9 +8,15 @@ version = "0.1.0"
 authors = [
   { name="onuraydi", email="onuraydi1934@gmail.com" }
 ]
-description = "Dynamic Programming-based Multiple Array Alignment (MSA) library"
+description = "Dynamic Programming-based Multiple Sequence Alignment (MSA) library"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
 dependencies = [
   "numpy>=1.21.0",
   "matplotlib>=3.5.0",

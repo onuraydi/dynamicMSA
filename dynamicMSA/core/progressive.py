@@ -87,7 +87,7 @@ def align_profile_to_sequence(
 
     # Konsensüs hizalamasındaki gap pozisyonlarını profile yansıt
     updated_profile = _apply_gaps_to_profile(profile, aligned_consensus, consensus)
-    updated_profile.apppend(aligned_seq)
+    updated_profile.append(aligned_seq)
 
     return updated_profile
 
@@ -164,7 +164,7 @@ def _apply_gaps_to_profile(
         seq_list = list(seq)
         for gap_pos in new_gaps:
             seq_list.insert(gap_pos, '-')
-            updated.append(''.join(seq_list))
+        updated.append(''.join(seq_list))  # for döngüsünün dışında
 
     return updated
 
@@ -224,7 +224,7 @@ def progressive_align(
     if scoring is None:
         scoring = ScoringMatrix()
 
-    if names in None:
+    if names is None:
         names = [f"seq{i}" for i in range(len(sequences))]
 
     n = len(sequences)
@@ -255,42 +255,20 @@ def progressive_align(
     # profile_map: dizi indeksi → o ana kadar hizalanmış satırlar
     # ---------------------------------------------------------------
 
+    # Her dizi kendi profilini oluşturur: {indeks: [dizi]}
     profile_map = {i: [sequences[i]] for i in range(n)}
-    merge_order = get_merge_order(tree)
 
-    for group in merge_order:
-        if len(group) < 2:
-            continue
+    # UPGMA ağacını post-order gezerek birleşme sırasını al
+    # Her adımda iki alt grubu birleştirip yeni bir profil oluşturuyoruz
+    _merge_profiles(tree, profile_map, scoring)
 
-        # Bu grubu oluşturan alt grupları bul
-        left_seqs = group[:len(group)//2]
-        right_seqs = group[len(group)//2]
-
-        left_profile = profile_map[left_seqs[0]]
-        right_profile = profile_map[right_profile[0]]
-
-        # Sol profili sağ profildeki her dizi ile hizala
-        
-        combined = left_profile
-        for seq in right_profile:
-            # seq zaten hizalanmış olabilir; sadece ilk karakterini kullan değil
-            # tüm hizalanmış dizisini direkt ekle (profil-profil hizalama basitleştirildi)
-
-            combined = align_profile_to_sequence(combined, seq.replace('-',''), scoring)
-
-        # Grubu temsil eden anahtara yaz
-        key = group[0]
-        profile_map[key] = combined
-
-    # En Büyük grup = kök = final hizalama
-    final_key = merge_order[-1][0]
-    aligned = profile_map[final_key]
-
-    # Hizalamayı isimlerle eşleştir
-    # Sıra: merge_order'ın son elemanının sequence listesi
+    # Kök düğümün sequences listesi final sırayı verir
     final_order = tree["sequences"]
-    aligned_ordered = aligned
-    names_ordered = [names[i] for i in final_order]
+    root_key    = _get_root_key(tree)
+    aligned     = profile_map[root_key]   # kök profili
+
+    aligned_ordered = aligned          # zaten doğru sırada
+    names_ordered   = [names[i] for i in final_order]
 
     # Toplam skor: tüm kolon çiftlerinin ortalama skoru
     total_score = _compute_alignment_score(aligned_ordered, scoring)
@@ -303,6 +281,49 @@ def progressive_align(
         "score"           : total_score
     }
 
+def _merge_profiles(node: dict, profile_map: dict, scoring) -> None:
+    """
+    UPGMA ağacını post-order (sol → sağ → kök) gezerek profilleri birleştirir.
+
+    Yaprak düğüm    : profile_map'te zaten var, bir şey yapma
+    İç düğüm (birleşme) : sol ve sağ çocukları önce işle, sonra birleştir
+    Sonuç         : profile_map[root_key] tüm dizileri içerir
+    """
+    # Yaprak düğüm: tek dizi, zaten profile_map'te
+    if "index" in node:
+        return
+
+    # Önce sol ve sağ alt ağaçları işle (post-order)
+    _merge_profiles(node["left"],  profile_map, scoring)
+    _merge_profiles(node["right"], profile_map, scoring)
+
+    # Sol ve sağ profillerin başlangıç anahtarını bul
+    left_key  = _get_root_key(node["left"])
+    right_key = _get_root_key(node["right"])
+
+    left_profile  = profile_map[left_key]
+    right_profile = profile_map[right_key]
+
+    # Sol profili, sağ profildeki tüm dizilerle hizala
+    combined = left_profile
+    for seq in right_profile:
+        combined = align_profile_to_sequence(combined, seq.replace('-', ''), scoring)
+
+    # Birleşik profili sol alt ağacın ilk yaprağının anahtarıyla kaydet
+    profile_map[left_key] = combined
+
+
+def _get_root_key(node: dict) -> int:
+    """
+    Bir düğümün profile_map'teki anahtarını döndürür.
+    Yaprak için: node["index"]
+    İç düğüm için: sol alt ağacın ilk yaprağının indeksi
+    """
+    if "index" in node:
+        return node["index"]
+    return _get_root_key(node["left"])
+
+
 def _compute_alignment_score(aligned: list[str], scoring: ScoringMatrix) -> float:
     """
     [EN]
@@ -312,7 +333,7 @@ def _compute_alignment_score(aligned: list[str], scoring: ScoringMatrix) -> floa
     Hizalanmış dizilerin toplam skoru: tüm kolon çiftlerinin toplamı.
     Her kolon için tüm dizi çiftleri değerlendirilir (sum-of-pairs skoru).
     """
-    if not aligned or len(aligned[0] == 0):
+    if not aligned or len(aligned[0]) == 0:
         return 0.0
     
     total = 0.0

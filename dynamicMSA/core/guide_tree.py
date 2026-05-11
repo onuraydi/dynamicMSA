@@ -77,64 +77,63 @@ def upgma(distance_matrix: list[list[float]], names: list[str] = None) -> dict:
     if names is None:
         names = [f"seq{i}" for i in range(n)]
 
-        # Çalışma kopyası: algoritma matrisi değiştirir
-        dist = copy.deepcopy(distance_matrix)
+    # Çalışma kopyası: algoritma matrisi değiştirir
+    dist = copy.deepcopy(distance_matrix)
 
-        # Her küme başlangıçta tek bir yaprak düğüm
-        clusters = [
-            {"index": i, "name": names[i], "sequences": [i], "height": 0.0}
-            for i in range(n)
-        ]
+    # Her küme başlangıçta tek bir yaprak düğüm
+    clusters = [
+        {"index": i, "name": names[i], "sequences": [i], "height": 0.0}
+        for i in range(n)
+    ]
 
-        # Birleştirme adımlarını kaydet (görselleştirme için)
-        merge_history = []
+    # Birleştirme adımlarını kaydet (görselleştirme için)
+    merge_history = []
 
-        while len(clusters) > 1:
-            # En Küçük mesafeli çifti bul
-            min_dist = float('inf')
-            min_i, min_j = 0,1
+    while len(clusters) > 1:
+        # En Küçük mesafeli çifti bul
+        min_dist = float('inf')
+        min_i, min_j = 0, 1
 
-            for i in range(len(clusters)):
-                for j in range(i + 1, len(clusters)):
-                    ci = clusters[i]["sequences"]
-                    cj = clusters[j]["sequences"]
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                ci = clusters[i]["sequences"]
+                cj = clusters[j]["sequences"]
 
-                    # küme ortalama mesafesi
-                    avg = _average_distance(dist, ci,cj)
+                # küme ortalama mesafesi
+                avg = _average_distance(dist, ci, cj)
 
-                    if avg < min_dist:
-                        min_dist = avg
-                        min_i, min_j = i, j
+                if avg < min_dist:
+                    min_dist = avg
+                    min_i, min_j = i, j
 
-            # yeni iç düğüm oluştur
-            # height = birleşme noktasının dallanma yüksekliği
-            left == clusters[min_i]
-            right = clusters[min_j]
-            height = min_dist / 2.0
+        # yeni iç düğüm oluştur
+        # height = birleşme noktasının dallanma yüksekliği
+        left = clusters[min_i]
+        right = clusters[min_j]
+        height = min_dist / 2.0
 
-            new_node = {
-                "left": left,
-                "right": right,
-                "height": height,
-                "sequences": left["sequences"] + right["sequences"]
-            }
+        new_node = {
+            "left": left,
+            "right": right,
+            "height": height,
+            "sequences": left["sequences"] + right["sequences"]
+        }
 
-            merge_history.append({
-                "merged": (left.get("name","node"), right.get("name","node")),
-                "distance": min_dist,
-                "height": height
-            })
+        merge_history.append({
+            "merged": (left.get("name", "node"), right.get("name", "node")),
+            "distance": min_dist,
+            "height": height
+        })
 
+        # Kümeleri güncelle: min_i ve min_j'yi kaldır, yenisini ekle
+        # (önce büyük indeksi kaldır, küçük indeks kaymasın)
+        clusters.pop(max(min_i, min_j))
+        clusters.pop(min(min_i, min_j))
+        clusters.append(new_node)
 
-            # Kümeleri güncelle: min_i ve min_j'yi kaldır, yenisini ekle
-            # (önce büyük indeksi kaldır, küçük indeks kaymasın)
-            clusters.pop(max(min_i, min_j))
-            clusters.pop(min(min_i, min_j))
-            clusters.append(new_node)
-
-        root = clusters[0]
-        root["merge_history"] = merge_history
-        return root
+    root = clusters[0]
+    root["merge_history"] = merge_history
+    return root
     
 def _average_distance(
     dist: list[list[float]],
@@ -190,6 +189,9 @@ def _traverse(node: dict, order: list):
     [TR]
     Ağacı post-order gezerek birleşme sırasını toplar.
     """
+    if node is None:
+        return  
+
     if "index" in node:
         # yaprak düğüm
         order.append([node["index"]])

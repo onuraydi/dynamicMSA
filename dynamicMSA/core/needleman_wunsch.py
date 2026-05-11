@@ -111,7 +111,7 @@ def needleman_wunsch(
         path.append((i,j))
         current = matrix[i][j]
 
-        if i > 0 or j > 0:
+        if i > 0 and j > 0:
             diag_val = matrix[i-1][j-1] + scoring.score(seq1[i-1],seq2[j-1])
         else:
             diag_val = float('-inf')
