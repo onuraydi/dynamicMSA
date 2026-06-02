@@ -161,7 +161,7 @@ def build_distance_matrix(sequences: list[str], scoring: ScoringMatrix = None) -
     matrix = [[0.0] * n for _ in range(n)]
 
     for i in range(n):
-        for j in range(i + 1, n):
+        for j in range(i + 1, n): # dizinin kendisiyle karşılaştırmayı atla
             d = compute_distance(sequences[i], sequences[j], scoring)
             matrix[i][j] = d
             matrix[j][i] = d
