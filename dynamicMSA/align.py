@@ -44,7 +44,7 @@ def align(
     visualize: bool = True,
     save_figures: bool = False,
     output_dir: str = ".",
-    verbose: bool = True
+    verbose: bool = True # konsol çıktıları için
 ) -> dict:
     """
     [EN]
@@ -115,6 +115,8 @@ def align(
     if names is None:
         names = [f"Seq{i+1}" for i in range(len(sequences))]
 
+    original_names = list(names)
+
     scoring = ScoringMatrix(match=match, mismatch=mismatch, gap=gap)
 
     # ---------------------------------------------------------------
@@ -129,7 +131,7 @@ def align(
     result = progressive_align(sequences, names, scoring)
 
     if verbose:
-        _pretty_print(result)
+        _pretty_print(result, original_names)
 
     # ---------------------------------------------------------------
     # ADIM 2: Görselleştirme
@@ -140,35 +142,43 @@ def align(
     return result
 
 
-def _pretty_print(result: dict) -> None:
+def _pretty_print(result: dict, original_names: list[str]) -> None:
     """Hizalama sonucunu düzenli formatta konsola yazdırır."""
     aligned = result["aligned"]
-    names   = result["names"]
+    names   = result["names"] # Hizalanmış (yeni) isim sırası
     dm      = result["distance_matrix"]
     history = result["guide_tree"].get("merge_history", [])
 
-    col_w = max(len(n) for n in names) + 2
+    # Sütun genişliklerini orijinal isimlere göre de kontrol et
+    col_w = max(max(len(n) for n in names), max(len(n) for n in original_names)) + 2
     seq_w = len(aligned[0]) if aligned else 0
-    total_w = col_w + seq_w + 4
+    inner_w = 2 + col_w + seq_w + 2
 
     print()
-    print("╔" + "═" * (total_w - 2) + "╗")
-    print("║" + " HIZALAMA SONUCU ".center(total_w - 2) + "║")
-    print("╠" + "═" * (total_w - 2) + "╣")
+    print("╔" + "═" * inner_w + "╗")
+    print("║" + " HIZALAMA SONUCU ".center(inner_w) + "║")
+    print("╠" + "═" * inner_w + "╣")
+    
+    # Hizalama sonucunu yazdırırken YENİ sırayı kullanıyoruz
     for name, seq in zip(names, aligned):
         print(f"║  {name:<{col_w}}{seq}  ║")
-    print("╠" + "═" * (total_w - 2) + "╣")
-    print(f"║  Toplam Skor : {result['score']:<{total_w - 20}}║")
-    print("╚" + "═" * (total_w - 2) + "╝")
+    
+    print("╠" + "═" * inner_w + "╣")
+    score_text = f"  Toplam Skor : {result['score']}"
+    print(f"║{score_text:<{inner_w}}║")
+    print("╚" + "═" * inner_w + "╝")
 
     print()
     print("┌─ MESAFE MATRİSİ ")
-    header = " " * (col_w + 2) + "".join(f"{n:^10}" for n in names)
+    
+    # DİKKAT: Matrisi yazdırırken ORİJİNAL isim sırasını kullanıyoruz!
+    header = " " * (col_w + 2) + "".join(f"{n:^10}" for n in original_names)
     print("│ " + header)
-    for i, name in enumerate(names):
-        row = "".join(f"{dm[i][j]:^10.3f}" for j in range(len(names)))
+    for i, name in enumerate(original_names):
+        row = "".join(f"{dm[i][j]:^10.3f}" for j in range(len(original_names)))
         print(f"│  {name:<{col_w}}{row}")
-    print("└" + "─" * (len(header) + 2))
+    
+    print("└" + "─" * (len(header) + 1))
 
     if history:
         print()

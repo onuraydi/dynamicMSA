@@ -100,6 +100,11 @@ def _profile_consensus(profile: list[str]) -> str:
     [TR]
     Profilin her pozisyonundaki en sık karakteri seçer.
     Gap '-' karakter sayımına dahil edilmez (yoksa hep gap kazanır).
+    profillerden temsilci ve tek bir konsensüs dizisi oluşturur.
+    Dizi1:  A - C T G
+    Dizi2:  A - C G G
+    Dizi3:  T - C G C
+    temsilci: A - C G G  (her pozisyonda en sık karakter)
     """
     if not profile:
         return ""
@@ -164,7 +169,7 @@ def _apply_gaps_to_profile(
         seq_list = list(seq)
         for gap_pos in new_gaps:
             seq_list.insert(gap_pos, '-')
-        updated.append(''.join(seq_list))  # for döngüsünün dışında
+        updated.append(''.join(seq_list))
 
     return updated
 

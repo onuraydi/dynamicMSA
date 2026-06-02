@@ -75,9 +75,9 @@ def needleman_wunsch(
     matrix = np.zeros((n+1, m+1), dtype = float)
 
     for i in range(n+1):
-        matrix[i][0] = i * scoring.gap # ilk satırdaki 0'lar
+        matrix[i][0] = i * scoring.gap # ilk satırdaki gap'lar
     for j in range(m+1):
-        matrix[0][j] = j* scoring.gap # ilk sütundaki 0'lar
+        matrix[0][j] = j* scoring.gap # ilk sütundaki gap'lar
 
 
     # ---------------------------------------------------------------
